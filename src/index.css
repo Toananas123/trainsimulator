@@ -199,3 +199,44 @@
     font-size: 8px;
   }
 }
+
+
+/* Additional material detail for the operator desk and its inset instrument modules. */
+.remaster-cockpit > div > div {
+  background-image:
+    linear-gradient(155deg, rgba(17, 29, 45, 0.98), rgba(6, 12, 22, 0.98)),
+    repeating-linear-gradient(0deg, rgba(210, 226, 244, 0.025) 0 1px, transparent 1px 4px) !important;
+  outline: 1px solid rgba(7, 12, 20, 0.55);
+  outline-offset: -5px;
+}
+
+.remaster-cockpit > div > div::before,
+.remaster-cockpit > div > div::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  bottom: 7px;
+  background: radial-gradient(circle at 35% 30%, #d3deea 0 14%, #617186 35%, #111a27 72%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(4, 9, 16, 0.8);
+  pointer-events: none;
+  opacity: 0.86;
+}
+
+.remaster-cockpit > div > div::before { left: 7px; }
+.remaster-cockpit > div > div::after { right: 7px; }
+
+.remaster-cockpit [data-testid="hud-speed-limit"],
+.remaster-cockpit [data-testid="hud-score"],
+.remaster-cockpit [data-testid="hud-distance"] {
+  text-shadow: 0 0 12px rgba(77, 190, 226, 0.16);
+}
+
+.remaster-cockpit [data-testid="btn-open-doors"],
+.remaster-cockpit [data-testid="btn-close-doors"],
+.remaster-cockpit [data-testid="btn-eco-toggle"],
+.remaster-cockpit button[aria-label="Sound Cab Horn"] {
+  letter-spacing: 0.035em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 4px 8px rgba(0, 0, 0, 0.26);
+}

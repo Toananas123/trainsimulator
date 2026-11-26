@@ -207,6 +207,27 @@ export function createMP14Train(
       metalness: 0.08,
     })
   );
+  const servicePanelMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0x536273,
+      roughness: 0.48,
+      metalness: 0.62,
+    })
+  );
+  const serviceGrilleMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0x101923,
+      roughness: 0.82,
+      metalness: 0.28,
+    })
+  );
+  const fastenerMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0xc2cbd4,
+      roughness: 0.3,
+      metalness: 0.88,
+    })
+  );
 
   const destTex = trackTex(
     createTrainDestinationTexture(maxAnisotropy, lineMode, route.terminusShortName)
@@ -236,6 +257,12 @@ export function createMP14Train(
   const doorLeafGeo = trackGeo(new THREE.BoxGeometry(isRer ? 1.02 : 0.92, isRer ? 2.15 : 2.08, 0.07));
   const doorWindowGeo = trackGeo(new THREE.BoxGeometry(isRer ? 0.76 : 0.68, 1.05, 0.085));
   const ledGeo = trackGeo(new THREE.BoxGeometry(0.32, 0.07, 0.06));
+  const servicePanelGeo = trackGeo(new THREE.BoxGeometry(0.82, 0.34, 0.045));
+  const serviceDoorGeo = trackGeo(new THREE.BoxGeometry(0.5, 0.28, 0.05));
+  const ventBackingGeo = trackGeo(new THREE.BoxGeometry(0.68, 0.25, 0.035));
+  const ventSlatGeo = trackGeo(new THREE.BoxGeometry(0.54, 0.024, 0.03));
+  const serviceScrewGeo = trackGeo(new THREE.CylinderGeometry(0.022, 0.022, 0.018, 8));
+  serviceScrewGeo.rotateX(Math.PI / 2);
 
   const carSpecs = isRer
     ? [
@@ -285,6 +312,43 @@ export function createMP14Train(
     lowerSide.castShadow = !isSoftwareGl;
     lowerSide.receiveShadow = !isSoftwareGl;
     root.add(lowerSide);
+
+    // External service hatches, ventilation grilles and captive fasteners break up the long smooth side panels.
+    const panelY = isRer ? 0.96 : 1.12;
+    for (const side of [-1, 1]) {
+      const surfaceZ = side * (halfW + 0.026);
+      const frontZ = side * (halfW + 0.052);
+      const ventX = midX - 4.1;
+      const ventBacking = new THREE.Mesh(ventBackingGeo, serviceGrilleMat);
+      ventBacking.position.set(ventX, panelY, frontZ);
+      root.add(ventBacking);
+      for (let slat = 0; slat < 5; slat++) {
+        const louver = new THREE.Mesh(ventSlatGeo, servicePanelMat);
+        louver.position.set(ventX, panelY - 0.085 + slat * 0.043, frontZ + side * 0.02);
+        root.add(louver);
+      }
+
+      const accessPanel = new THREE.Mesh(servicePanelGeo, servicePanelMat);
+      accessPanel.position.set(midX + 4.4, panelY, surfaceZ);
+      root.add(accessPanel);
+      const serviceDoor = new THREE.Mesh(serviceDoorGeo, darkUnderframeMat);
+      serviceDoor.position.set(midX + 8.0, panelY, surfaceZ);
+      root.add(serviceDoor);
+
+      for (const dx of [-0.33, 0.33]) {
+        for (const dy of [-0.11, 0.11]) {
+          const screw = new THREE.Mesh(serviceScrewGeo, fastenerMat);
+          screw.position.set(midX + 4.4 + dx, panelY + dy, frontZ + side * 0.025);
+          root.add(screw);
+        }
+      }
+      const latch = new THREE.Mesh(
+        trackGeo(new THREE.BoxGeometry(0.12, 0.045, 0.025)),
+        fastenerMat
+      );
+      latch.position.set(midX + 8.0, panelY, frontZ + side * 0.025);
+      root.add(latch);
+    }
 
     const purpleStripe = new THREE.Mesh(
       trackGeo(new THREE.BoxGeometry(carLen + 0.02, 0.14, carWidth + 0.02)),

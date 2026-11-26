@@ -376,6 +376,104 @@ export function createMetro3DWorld(
     })
   );
 
+  // Tactile warning tiles: raised studs and seams catch station lighting at platform level.
+  const tactileCanvas = document.createElement('canvas');
+  tactileCanvas.width = 256;
+  tactileCanvas.height = 128;
+  const tactileCtx = tactileCanvas.getContext('2d')!;
+  tactileCtx.fillStyle = '#d7ad34';
+  tactileCtx.fillRect(0, 0, 256, 128);
+  tactileCtx.strokeStyle = 'rgba(68, 48, 17, 0.52)';
+  tactileCtx.lineWidth = 3;
+  for (let x = 0; x <= 256; x += 64) {
+    tactileCtx.beginPath();
+    tactileCtx.moveTo(x, 0);
+    tactileCtx.lineTo(x, 128);
+    tactileCtx.stroke();
+  }
+  for (let y = 0; y <= 128; y += 64) {
+    tactileCtx.beginPath();
+    tactileCtx.moveTo(0, y);
+    tactileCtx.lineTo(256, y);
+    tactileCtx.stroke();
+  }
+  for (let y = 16; y < 128; y += 32) {
+    for (let x = 16; x < 256; x += 32) {
+      tactileCtx.beginPath();
+      tactileCtx.arc(x, y, 5.5, 0, Math.PI * 2);
+      tactileCtx.fillStyle = '#f1d16d';
+      tactileCtx.fill();
+      tactileCtx.strokeStyle = 'rgba(86, 61, 22, 0.5)';
+      tactileCtx.lineWidth = 1.3;
+      tactileCtx.stroke();
+    }
+  }
+  const tactileTex = trackTex(new THREE.CanvasTexture(tactileCanvas));
+  tactileTex.colorSpace = THREE.SRGBColorSpace;
+  tactileTex.wrapS = THREE.RepeatWrapping;
+  tactileTex.wrapT = THREE.RepeatWrapping;
+  tactileTex.repeat.set(18, 1);
+  tactileTex.anisotropy = maxAnisotropy;
+  const tactileTileMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      map: tactileTex,
+      color: 0xffffff,
+      roughness: 0.86,
+      metalness: 0.02,
+    })
+  );
+
+  // Reusable station poster artwork, framed like backlit transit advertising panels.
+  const posterCanvas = document.createElement('canvas');
+  posterCanvas.width = 512;
+  posterCanvas.height = 320;
+  const posterCtx = posterCanvas.getContext('2d')!;
+  const posterGradient = posterCtx.createLinearGradient(0, 0, 512, 320);
+  posterGradient.addColorStop(0, '#172f4a');
+  posterGradient.addColorStop(1, '#071321');
+  posterCtx.fillStyle = posterGradient;
+  posterCtx.fillRect(0, 0, 512, 320);
+  posterCtx.fillStyle = '#00aa91';
+  posterCtx.fillRect(0, 0, 512, 16);
+  posterCtx.fillStyle = '#e5edf6';
+  posterCtx.font = '700 24px Arial, sans-serif';
+  posterCtx.fillText('RÉSEAU DE PARIS', 32, 58);
+  posterCtx.font = '800 43px Arial, sans-serif';
+  posterCtx.fillText('LA VILLE', 32, 126);
+  posterCtx.fillText('EN MOUVEMENT', 32, 174);
+  posterCtx.fillStyle = '#d7ad34';
+  posterCtx.fillRect(32, 202, 448, 4);
+  posterCtx.fillStyle = '#9fb2c8';
+  posterCtx.font = '600 17px Arial, sans-serif';
+  posterCtx.fillText('Une nouvelle façon de parcourir Paris', 32, 242);
+  posterCtx.fillStyle = 'rgba(0, 170, 145, 0.18)';
+  posterCtx.beginPath();
+  posterCtx.arc(425, 80, 48, 0, Math.PI * 2);
+  posterCtx.fill();
+  const posterTex = trackTex(new THREE.CanvasTexture(posterCanvas));
+  posterTex.colorSpace = THREE.SRGBColorSpace;
+  const posterMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      map: posterTex,
+      emissiveMap: posterTex,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.22,
+      roughness: 0.48,
+      metalness: 0.02,
+      side: THREE.DoubleSide,
+    })
+  );
+  const cameraLensMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0x07111e,
+      emissive: 0x0b2940,
+      emissiveIntensity: 0.7,
+      roughness: 0.2,
+      metalness: 0.32,
+    })
+  );
+
+
   // Unique RER A Architecture Materials (La Défense Grande Arche & Vincennes Suburban Trench)
   const defenseConcreteMat = trackMat(
     new THREE.MeshStandardMaterial({
@@ -1446,6 +1544,26 @@ export function createMetro3DWorld(
       const bench = new THREE.Mesh(benchGeo, benchMetalMat);
       bench.position.set(bx, 1.08, -5.65);
       sRoot.add(bench);
+
+      // Seat supports, end cheeks and a narrow back rail make the furniture read as a real bench.
+      const benchLegGeo = trackGeo(new THREE.BoxGeometry(0.12, 0.34, 0.12));
+      const benchBackGeo = trackGeo(new THREE.BoxGeometry(2.5, 0.07, 0.09));
+      for (const lx of [-0.94, 0.94]) {
+        const leg = new THREE.Mesh(benchLegGeo, darkMetalMat);
+        leg.position.set(bx + lx, 0.69, -5.65);
+        sRoot.add(leg);
+      }
+      const backRail = new THREE.Mesh(benchBackGeo, benchMetalMat);
+      backRail.position.set(bx, 1.34, -5.94);
+      sRoot.add(backRail);
+      for (let slat = 0; slat < 5; slat++) {
+        const backSlat = new THREE.Mesh(
+          trackGeo(new THREE.BoxGeometry(2.3, 0.035, 0.045)),
+          benchMetalMat
+        );
+        backSlat.position.set(bx, 1.13 + slat * 0.045, -5.93);
+        sRoot.add(backSlat);
+      }
     }
 
     const totemMat = trackMat(
@@ -1486,6 +1604,33 @@ export function createMetro3DWorld(
     edgeStripe.position.set(STATION_CENTER_OFFSET, 0.86, 1.72);
     sRoot.add(edgeStripe);
 
+    // Raised tactile paving behind the warning stripe, with a repeated studded surface texture.
+    const tactileStrip = new THREE.Mesh(
+      trackGeo(new THREE.BoxGeometry(STATION_LEN - 1.5, 0.035, 0.52)),
+      tactileTileMat
+    );
+    tactileStrip.position.set(STATION_CENTER_OFFSET, 0.87, 2.15);
+    tactileStrip.receiveShadow = !isSoftwareGl;
+    sRoot.add(tactileStrip);
+
+    const farTactileStrip = new THREE.Mesh(
+      trackGeo(new THREE.BoxGeometry(STATION_LEN - 1.5, 0.035, 0.42)),
+      tactileTileMat
+    );
+    farTactileStrip.position.set(STATION_CENTER_OFFSET, 0.87, -4.84);
+    sRoot.add(farTactileStrip);
+
+    // Small expansion joints and recessed service covers on the platform surface.
+    const platformJointGeo = trackGeo(new THREE.BoxGeometry(0.035, 0.012, 4.8));
+    const platformJointMat = trackMat(
+      new THREE.MeshStandardMaterial({ color: 0x566171, roughness: 0.82, metalness: 0.12 })
+    );
+    for (let jointX = -104; jointX <= 28; jointX += 16) {
+      const joint = new THREE.Mesh(platformJointGeo, platformJointMat);
+      joint.position.set(jointX, 0.858, 4.16);
+      sRoot.add(joint);
+    }
+
     // Yellow ARRÊT target bar painted across platform + upright ARRÊT board right at x = 0 (stopX)
     const targetStripe = new THREE.Mesh(
       trackGeo(new THREE.BoxGeometry(0.45, 0.035, 2.4)),
@@ -1501,6 +1646,48 @@ export function createMetro3DWorld(
     );
     nearWall.position.set(STATION_CENTER_OFFSET, 3.0, 6.75);
     sRoot.add(nearWall);
+
+    // Wall-mounted campaign panels and compact CCTV domes give each station a lived-in scale.
+    const posterFrameGeo = trackGeo(new THREE.BoxGeometry(3.35, 1.96, 0.14));
+    const posterFaceGeo = trackGeo(new THREE.PlaneGeometry(3.08, 1.68));
+    for (const posterX of [-88, -48, -8]) {
+      const posterFrame = new THREE.Mesh(posterFrameGeo, darkMetalMat);
+      posterFrame.position.set(posterX, 3.15, 6.47);
+      const posterFace = new THREE.Mesh(posterFaceGeo, posterMat);
+      posterFace.position.set(posterX, 3.15, 6.385);
+      posterFace.rotation.y = Math.PI;
+      sRoot.add(posterFrame, posterFace);
+    }
+
+    const cctvBodyGeo = trackGeo(new THREE.BoxGeometry(0.42, 0.22, 0.3));
+    const cctvArmGeo = trackGeo(new THREE.BoxGeometry(0.09, 0.34, 0.1));
+    const cctvLensGeo = trackGeo(new THREE.CylinderGeometry(0.075, 0.075, 0.08, 12));
+    for (const cameraX of [-96, -36, 22]) {
+      const cameraBody = new THREE.Mesh(cctvBodyGeo, benchMetalMat);
+      cameraBody.position.set(cameraX, 5.42, 6.45);
+      const cameraArm = new THREE.Mesh(cctvArmGeo, darkMetalMat);
+      cameraArm.position.set(cameraX, 5.2, 6.57);
+      const cameraLens = new THREE.Mesh(cctvLensGeo, cameraLensMat);
+      cameraLens.rotation.x = Math.PI / 2;
+      cameraLens.position.set(cameraX, 5.42, 6.27);
+      sRoot.add(cameraBody, cameraArm, cameraLens);
+
+      // Small perforated speaker / PA housing beside the camera.
+      const paBox = new THREE.Mesh(
+        trackGeo(new THREE.BoxGeometry(0.48, 0.16, 0.1)),
+        darkMetalMat
+      );
+      paBox.position.set(cameraX + 2.1, 5.36, 6.5);
+      sRoot.add(paBox);
+      for (let grille = 0; grille < 5; grille++) {
+        const grilleSlot = new THREE.Mesh(
+          trackGeo(new THREE.BoxGeometry(0.025, 0.095, 0.012)),
+          cameraLensMat
+        );
+        grilleSlot.position.set(cameraX + 1.93 + grille * 0.085, 5.36, 6.44);
+        sRoot.add(grilleSlot);
+      }
+    }
 
     const stopBoard = new THREE.Mesh(
       trackGeo(new THREE.BoxGeometry(0.12, 0.56, 1.05)),
