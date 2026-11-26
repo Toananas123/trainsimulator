@@ -12,6 +12,7 @@ import { getSpeedCamerasForLine } from '../speedCamera';
 import {
   createCanopyGlassTexture,
   createDefenseConcreteTextures,
+  createDistantFacadeTexture,
   createDistanceMarkerTexture,
   createPlatformDeckTextures,
   createRubberTireTrackTexture,
@@ -39,9 +40,13 @@ interface CommuterRig {
   group: THREE.Group;
   coatMesh: THREE.Mesh;
   coatMat: THREE.MeshStandardMaterial;
+  skinMat: THREE.MeshStandardMaterial;
+  hairMat: THREE.MeshStandardMaterial;
   leftLeg: THREE.Mesh;
   rightLeg: THREE.Mesh;
-  bagMesh: THREE.Mesh;
+  leftArm: THREE.Mesh;
+  rightArm: THREE.Mesh;
+  bagMesh: THREE.Group;
 }
 
 interface StationSlot {
@@ -144,6 +149,9 @@ export function createMetro3DWorld(
   trackTex(suburbanBrickTex.normalMap);
 
   const suburbanSkyTex = trackTex(createSuburbanSkyTexture(maxAnisotropy));
+  const distantFacadeTex = createDistantFacadeTexture(maxAnisotropy);
+  trackTex(distantFacadeTex.map);
+  trackTex(distantFacadeTex.normalMap);
   const canopyGlassTex = trackTex(createCanopyGlassTexture(maxAnisotropy));
 
   const tunnelTex = createTunnelConcreteTextures(maxAnisotropy);
@@ -524,6 +532,16 @@ export function createMetro3DWorld(
       fog: false,
     })
   );
+  const distantFacadeMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      map: distantFacadeTex.map,
+      normalMap: distantFacadeTex.normalMap,
+      normalScale: new THREE.Vector2(0.72, 0.72),
+      color: 0xf5ead8,
+      roughness: 0.82,
+      metalness: 0.02,
+    })
+  );
   const canopyIronMat = trackMat(
     new THREE.MeshStandardMaterial({
       color: 0x1e3a34,
@@ -826,7 +844,10 @@ export function createMetro3DWorld(
   const outWallGeo = trackGeo(new THREE.BoxGeometry(RING_STEP + 0.25, 2.6, 0.45));
   const outRailGeo = trackGeo(new THREE.BoxGeometry(RING_STEP + 0.25, 0.14, 0.14));
   const outTrunkGeo = trackGeo(new THREE.CylinderGeometry(0.18, 0.28, 3.0, 6));
-  const outFoliageGeo = trackGeo(new THREE.IcosahedronGeometry(1.75, 1));
+  const outFoliageGeo = trackGeo(new THREE.IcosahedronGeometry(1.75, 2));
+  const outFoliageSubGeo = trackGeo(new THREE.IcosahedronGeometry(1.1, 2));
+  const skylineBuildingGeo = trackGeo(new THREE.BoxGeometry(14, 14, 5.2));
+  const skylineRoofGeo = trackGeo(new THREE.BoxGeometry(14.8, 0.65, 6.0));
   const outMastGeo = trackGeo(new THREE.BoxGeometry(0.24, 5.7, 0.24));
 
   const outTurfFarInst = new THREE.InstancedMesh(outGrassGeo, turfMat, RING_COUNT);
@@ -838,6 +859,13 @@ export function createMetro3DWorld(
   const outTreeCanopyInst = new THREE.InstancedMesh(outFoliageGeo, foliageDeepMat, RING_COUNT);
   const outTreeTrunkNearInst = new THREE.InstancedMesh(outTrunkGeo, trunkMat, RING_COUNT);
   const outTreeCanopyNearInst = new THREE.InstancedMesh(outFoliageGeo, foliageLightMat, RING_COUNT);
+  const outTreeCanopyDetailFarInst = new THREE.InstancedMesh(outFoliageSubGeo, foliageLightMat, RING_COUNT);
+  const outTreeCanopyDetailNearInst = new THREE.InstancedMesh(outFoliageSubGeo, foliageDeepMat, RING_COUNT);
+  const SKYLINE_COUNT = 20;
+  const skylineFarInst = new THREE.InstancedMesh(skylineBuildingGeo, distantFacadeMat, SKYLINE_COUNT);
+  const skylineNearInst = new THREE.InstancedMesh(skylineBuildingGeo, distantFacadeMat, SKYLINE_COUNT);
+  const skylineRoofFarInst = new THREE.InstancedMesh(skylineRoofGeo, slateRoofMat, SKYLINE_COUNT);
+  const skylineRoofNearInst = new THREE.InstancedMesh(skylineRoofGeo, slateRoofMat, SKYLINE_COUNT);
   const outCatMastInst = new THREE.InstancedMesh(outMastGeo, darkMetalMat, catenaryPortalCount);
 
   for (const inst of [
@@ -850,6 +878,12 @@ export function createMetro3DWorld(
     outTreeCanopyInst,
     outTreeTrunkNearInst,
     outTreeCanopyNearInst,
+    outTreeCanopyDetailFarInst,
+    outTreeCanopyDetailNearInst,
+    skylineFarInst,
+    skylineNearInst,
+    skylineRoofFarInst,
+    skylineRoofNearInst,
     outCatMastInst,
   ]) {
     inst.frustumCulled = false;
@@ -1082,19 +1116,30 @@ export function createMetro3DWorld(
   const STATION_LEN = isRer ? 148 : 120; // x = -124..+24 (RER A) or -96..+24 (M14)
   const STATION_CENTER_OFFSET = isRer ? -50 : -36;
 
-  const headGeo = trackGeo(new THREE.SphereGeometry(0.14, 8, 8));
-  const torsoGeo = trackGeo(new THREE.BoxGeometry(0.36, 0.72, 0.24));
-  const legGeo = trackGeo(new THREE.BoxGeometry(0.13, 0.68, 0.14));
-  const bagGeo = trackGeo(new THREE.BoxGeometry(0.32, 0.26, 0.14));
-  const skinMat = trackMat(
-    new THREE.MeshStandardMaterial({ color: 0xe6c3a5, roughness: 0.75 })
-  );
-  const pantsMat = trackMat(
-    new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 })
-  );
-  const bagMat = trackMat(
-    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.65 })
-  );
+  const headGeo = trackGeo(new THREE.SphereGeometry(0.14, 16, 12));
+  const torsoGeo = trackGeo(new THREE.CapsuleGeometry(0.18, 0.34, 4, 10));
+  const legGeo = trackGeo(new THREE.CapsuleGeometry(0.068, 0.46, 3, 8));
+  const armGeo = trackGeo(new THREE.CapsuleGeometry(0.052, 0.4, 3, 8));
+  const neckGeo = trackGeo(new THREE.CylinderGeometry(0.055, 0.065, 0.13, 10));
+  const hairCapGeo = trackGeo(new THREE.SphereGeometry(0.146, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.56));
+  const eyeGeo = trackGeo(new THREE.SphereGeometry(0.012, 8, 6));
+  const noseGeo = trackGeo(new THREE.SphereGeometry(0.024, 8, 6));
+  const mouthGeo = trackGeo(new THREE.SphereGeometry(0.018, 8, 6));
+  const shoeGeo = trackGeo(new THREE.SphereGeometry(0.085, 10, 8));
+  const handGeo = trackGeo(new THREE.SphereGeometry(0.058, 9, 7));
+  const fringeGeo = trackGeo(new THREE.SphereGeometry(0.105, 10, 7, 0, Math.PI * 2, 0, Math.PI * 0.38));
+  const bagGeo = trackGeo(new THREE.BoxGeometry(0.32, 0.34, 0.16));
+  const bagStrapGeo = trackGeo(new THREE.BoxGeometry(0.055, 0.38, 0.035));
+  const bagPocketGeo = trackGeo(new THREE.BoxGeometry(0.22, 0.12, 0.045));
+  const collarGeo = trackGeo(new THREE.BoxGeometry(0.28, 0.1, 0.2));
+  const faceDetailMat = trackMat(new THREE.MeshStandardMaterial({ color: 0x201a18, roughness: 0.72 }));
+  const shirtMat = trackMat(new THREE.MeshStandardMaterial({ color: 0xd9e0e8, roughness: 0.82 }));
+  const shoePalette = [0x111820, 0x262a31, 0x463b34, 0x313c48];
+  const coatPalette = [0x24374c, 0x59616b, 0x4c3d58, 0x34534f, 0x714d3d, 0x29333c, 0x6c4650, 0x7a705e, 0x36465c, 0x8b593b, 0x465d70, 0x3d4b3e];
+  const trouserPalette = [0x172536, 0x343b45, 0x4a4c51, 0x4b3d35, 0x243b3a, 0x55565a];
+  const skinPalette = [0xf0c9a7, 0xdca77f, 0xb97853, 0x8f5b43, 0x684331, 0xe8b995, 0xc78d6a, 0xf3d3b6];
+  const hairPalette = [0x171719, 0x3a281f, 0x694a32, 0x9b784e, 0x5a5d61, 0x211c24, 0x8a4632];
+  const bagPalette = [0x202a35, 0x3a4147, 0x65503b, 0x273c43, 0x4a384d];
 
   function buildStationSlot(): StationSlot {
     const sRoot = new THREE.Group();
@@ -1824,45 +1869,78 @@ export function createMetro3DWorld(
       }
     }
 
-    // 7) Composite 3D Animated Commuter Pool (24 figures supporting Rush Hour density)
-    const armGeo = trackGeo(new THREE.BoxGeometry(0.11, 0.56, 0.12));
+    // 7) Detailed commuter pool with distinct outfits, hair, footwear and accessories.
     const commuters: CommuterRig[] = [];
     for (let i = 0; i < 24; i++) {
       const cg = new THREE.Group();
       cg.visible = false;
-
-      const coatMat = trackMat(
-        new THREE.MeshStandardMaterial({
-          color: 0x334155,
-          roughness: 0.78,
-          metalness: 0.05,
-        })
-      );
+      const coatMat = trackMat(new THREE.MeshStandardMaterial({ color: coatPalette[i % coatPalette.length], roughness: 0.88, metalness: 0.015 }));
+      const pantsMat = trackMat(new THREE.MeshStandardMaterial({ color: trouserPalette[(i * 5 + 2) % trouserPalette.length], roughness: 0.91 }));
+      const skinMat = trackMat(new THREE.MeshStandardMaterial({ color: skinPalette[(i * 3 + 1) % skinPalette.length], roughness: 0.82 }));
+      const hairMat = trackMat(new THREE.MeshStandardMaterial({ color: hairPalette[(i * 5 + 3) % hairPalette.length], roughness: 0.9 }));
+      const bagMat = trackMat(new THREE.MeshStandardMaterial({ color: bagPalette[(i * 3) % bagPalette.length], roughness: 0.86 }));
+      const shoeMat = trackMat(new THREE.MeshStandardMaterial({ color: shoePalette[i % shoePalette.length], roughness: 0.78 }));
 
       const leftLeg = new THREE.Mesh(legGeo, pantsMat);
-      leftLeg.position.set(-0.08, 0.34, 0);
+      leftLeg.position.set(-0.08, 0.36, 0);
       const rightLeg = new THREE.Mesh(legGeo, pantsMat);
-      rightLeg.position.set(0.08, 0.34, 0);
+      rightLeg.position.set(0.08, 0.36, 0);
+      const leftShoe = new THREE.Mesh(shoeGeo, shoeMat);
+      leftShoe.position.set(-0.08, 0.075, 0.045);
+      leftShoe.scale.set(0.82, 0.48, 1.45);
+      const rightShoe = new THREE.Mesh(shoeGeo, shoeMat);
+      rightShoe.position.set(0.08, 0.075, 0.045);
+      rightShoe.scale.copy(leftShoe.scale);
 
       const coatMesh = new THREE.Mesh(torsoGeo, coatMat);
-      coatMesh.position.set(0, 1.04, 0);
+      coatMesh.position.set(0, 1.05, 0);
       coatMesh.castShadow = !isSoftwareGl;
-
+      const collar = new THREE.Mesh(collarGeo, shirtMat);
+      collar.position.set(0, 1.39, 0.018);
       const leftArm = new THREE.Mesh(armGeo, coatMat);
-      leftArm.position.set(-0.23, 1.02, 0);
+      leftArm.position.set(-0.235, 1.03, 0.005);
+      leftArm.rotation.z = -0.08;
       const rightArm = new THREE.Mesh(armGeo, coatMat);
-      rightArm.position.set(0.23, 1.02, 0);
+      rightArm.position.set(0.235, 1.03, 0.005);
+      rightArm.rotation.z = 0.08;
+      const leftHand = new THREE.Mesh(handGeo, skinMat);
+      leftHand.position.set(-0.245, 0.76, 0.015);
+      const rightHand = new THREE.Mesh(handGeo, skinMat);
+      rightHand.position.set(0.245, 0.76, 0.015);
 
+      const neck = new THREE.Mesh(neckGeo, skinMat);
+      neck.position.set(0, 1.47, 0);
       const head = new THREE.Mesh(headGeo, skinMat);
-      head.position.set(0, 1.54, 0);
+      head.position.set(0, 1.59, 0);
+      head.scale.set(0.98, 1.12, 0.96);
+      const hair = new THREE.Mesh(hairCapGeo, hairMat);
+      hair.position.set(0, 1.64, -0.006);
+      const fringe = new THREE.Mesh(fringeGeo, hairMat);
+      fringe.position.set(0, 1.58, 0.075);
+      const eyeL = new THREE.Mesh(eyeGeo, faceDetailMat);
+      eyeL.position.set(-0.045, 1.61, 0.124);
+      const eyeR = new THREE.Mesh(eyeGeo, faceDetailMat);
+      eyeR.position.set(0.045, 1.61, 0.124);
+      const nose = new THREE.Mesh(noseGeo, skinMat);
+      nose.position.set(0, 1.565, 0.133);
+      nose.scale.set(0.65, 0.8, 0.55);
+      const mouth = new THREE.Mesh(mouthGeo, faceDetailMat);
+      mouth.position.set(0, 1.525, 0.128);
+      mouth.scale.set(1.0, 0.28, 0.3);
 
-      const bagMesh = new THREE.Mesh(bagGeo, bagMat);
-      bagMesh.position.set(0.27, 0.68, 0.04);
+      const bagMesh = new THREE.Group();
+      const backpack = new THREE.Mesh(bagGeo, bagMat);
+      backpack.position.set(0.27, 0.69, -0.085);
+      const pocket = new THREE.Mesh(bagPocketGeo, darkMetalMat);
+      pocket.position.set(0.27, 0.65, -0.17);
+      const strap = new THREE.Mesh(bagStrapGeo, bagMat);
+      strap.position.set(0.19, 0.98, -0.045);
+      strap.rotation.z = -0.16;
+      bagMesh.add(backpack, pocket, strap);
 
-      cg.add(leftLeg, rightLeg, coatMesh, leftArm, rightArm, head, bagMesh);
+      cg.add(leftLeg, rightLeg, leftShoe, rightShoe, coatMesh, collar, leftArm, rightArm, leftHand, rightHand, neck, head, hair, fringe, eyeL, eyeR, nose, mouth, bagMesh);
       sRoot.add(cg);
-
-      commuters.push({ group: cg, coatMesh, coatMat, leftLeg, rightLeg, bagMesh });
+      commuters.push({ group: cg, coatMesh, coatMat, skinMat, hairMat, leftLeg, rightLeg, leftArm, rightArm, bagMesh });
     }
 
     root.add(sRoot);
@@ -2004,6 +2082,9 @@ export function createMetro3DWorld(
       outWallNearInst.visible = !isSideView;
       outTreeTrunkNearInst.visible = !isSideView;
       outTreeCanopyNearInst.visible = !isSideView;
+      outTreeCanopyDetailNearInst.visible = !isSideView;
+      skylineNearInst.visible = !isSideView;
+      skylineRoofNearInst.visible = !isSideView;
 
       for (let i = 0; i < RING_COUNT; i++) {
         const rx = ringOrigin + i * RING_STEP;
@@ -2099,15 +2180,25 @@ export function createMetro3DWorld(
             _dummyObj.updateMatrix();
             outTreeTrunkInst.setMatrixAt(i, _dummyObj.matrix);
             _dummyObj.position.set(rx, 6.2, -9.8);
+            _dummyObj.scale.set(1.05, 1.12, 1.0);
             _dummyObj.updateMatrix();
             outTreeCanopyInst.setMatrixAt(i, _dummyObj.matrix);
+            _dummyObj.position.set(rx - 0.92, 5.85, -9.35);
+            _dummyObj.scale.set(0.78, 0.7, 0.78);
+            _dummyObj.updateMatrix();
+            outTreeCanopyDetailFarInst.setMatrixAt(i, _dummyObj.matrix);
 
             _dummyObj.position.set(rx + 4, 4.05, 9.8);
             _dummyObj.updateMatrix();
             outTreeTrunkNearInst.setMatrixAt(i, _dummyObj.matrix);
             _dummyObj.position.set(rx + 4, 6.2, 9.8);
+            _dummyObj.scale.set(1.0, 1.06, 1.0);
             _dummyObj.updateMatrix();
             outTreeCanopyNearInst.setMatrixAt(i, _dummyObj.matrix);
+            _dummyObj.position.set(rx + 3.1, 5.88, 9.42);
+            _dummyObj.scale.set(0.72, 0.68, 0.75);
+            _dummyObj.updateMatrix();
+            outTreeCanopyDetailNearInst.setMatrixAt(i, _dummyObj.matrix);
           } else {
             _dummyObj.position.set(rx, -100, 0);
             _dummyObj.scale.set(0.0001, 0.0001, 0.0001);
@@ -2116,6 +2207,8 @@ export function createMetro3DWorld(
             outTreeCanopyInst.setMatrixAt(i, _dummyObj.matrix);
             outTreeTrunkNearInst.setMatrixAt(i, _dummyObj.matrix);
             outTreeCanopyNearInst.setMatrixAt(i, _dummyObj.matrix);
+            outTreeCanopyDetailFarInst.setMatrixAt(i, _dummyObj.matrix);
+            outTreeCanopyDetailNearInst.setMatrixAt(i, _dummyObj.matrix);
           }
         } else {
           _dummyObj.position.set(rx, -100, 0);
@@ -2131,6 +2224,36 @@ export function createMetro3DWorld(
           outTreeCanopyInst.setMatrixAt(i, _dummyObj.matrix);
           outTreeTrunkNearInst.setMatrixAt(i, _dummyObj.matrix);
           outTreeCanopyNearInst.setMatrixAt(i, _dummyObj.matrix);
+          outTreeCanopyDetailFarInst.setMatrixAt(i, _dummyObj.matrix);
+          outTreeCanopyDetailNearInst.setMatrixAt(i, _dummyObj.matrix);
+        }
+      }
+
+      // Distant Parisian roofline recycled in 20m blocks behind the tree corridor.
+      const skylineOrigin = Math.floor((tx - 190) / 20) * 20;
+      for (let i = 0; i < SKYLINE_COUNT; i++) {
+        const bx = skylineOrigin + i * 20;
+        const visible = isPositionOutdoor(bx, stations) && !isInsideAnyStation(bx, stations, stationLeadM, stationTrailM);
+        if (visible) {
+          const h = 9.5 + ((Math.floor(bx / 20) % 5 + 5) % 5) * 1.65;
+          const widthScale = 0.82 + (i % 3) * 0.12;
+          _dummyObj.position.set(bx, 2.3 + h * 0.5, -27 - (i % 3) * 2.6);
+          _dummyObj.rotation.set(0, (i % 2 ? 0.012 : -0.012), 0);
+          _dummyObj.scale.set(widthScale, h / 14, 1.08);
+          _dummyObj.updateMatrix(); skylineFarInst.setMatrixAt(i, _dummyObj.matrix);
+          _dummyObj.position.set(bx, 2.3 + h * 0.5, 27 + ((i + 1) % 3) * 2.4);
+          _dummyObj.rotation.set(0, (i % 2 ? -0.01 : 0.01), 0);
+          _dummyObj.updateMatrix(); skylineNearInst.setMatrixAt(i, _dummyObj.matrix);
+          _dummyObj.position.set(bx, 2.3 + h + 0.35, -27 - (i % 3) * 2.6);
+          _dummyObj.scale.set(widthScale * 1.02, 1, 1.1); _dummyObj.rotation.set(0, 0, 0);
+          _dummyObj.updateMatrix(); skylineRoofFarInst.setMatrixAt(i, _dummyObj.matrix);
+          _dummyObj.position.set(bx, 2.3 + h + 0.35, 27 + ((i + 1) % 3) * 2.4);
+          _dummyObj.updateMatrix(); skylineRoofNearInst.setMatrixAt(i, _dummyObj.matrix);
+        } else {
+          _dummyObj.position.set(0, -100, 0); _dummyObj.scale.set(0.0001, 0.0001, 0.0001);
+          _dummyObj.rotation.set(0, 0, 0); _dummyObj.updateMatrix();
+          skylineFarInst.setMatrixAt(i, _dummyObj.matrix); skylineNearInst.setMatrixAt(i, _dummyObj.matrix);
+          skylineRoofFarInst.setMatrixAt(i, _dummyObj.matrix); skylineRoofNearInst.setMatrixAt(i, _dummyObj.matrix);
         }
       }
       farTunnelInst.instanceMatrix.needsUpdate = true;
@@ -2149,6 +2272,12 @@ export function createMetro3DWorld(
       outTreeCanopyInst.instanceMatrix.needsUpdate = true;
       outTreeTrunkNearInst.instanceMatrix.needsUpdate = true;
       outTreeCanopyNearInst.instanceMatrix.needsUpdate = true;
+      outTreeCanopyDetailFarInst.instanceMatrix.needsUpdate = true;
+      outTreeCanopyDetailNearInst.instanceMatrix.needsUpdate = true;
+      skylineFarInst.instanceMatrix.needsUpdate = true;
+      skylineNearInst.instanceMatrix.needsUpdate = true;
+      skylineRoofFarInst.instanceMatrix.needsUpdate = true;
+      skylineRoofNearInst.instanceMatrix.needsUpdate = true;
 
       // Glowing green SORTIE tunnel markers every 40m (tunnel-only)
       const sortieOrigin = Math.floor((tx - 60) / 40) * 40;
@@ -2304,6 +2433,8 @@ export function createMetro3DWorld(
           const swing = isMoving ? Math.sin(actor.walkPhase) * 0.42 : 0;
           rig.leftLeg.rotation.z = swing;
           rig.rightLeg.rotation.z = -swing;
+          rig.leftArm.rotation.z = -0.08 - swing * 0.34;
+          rig.rightArm.rotation.z = 0.08 + swing * 0.34;
 
           rig.group.rotation.y = actor.role === 'alighting' ? 0 : Math.PI;
         }

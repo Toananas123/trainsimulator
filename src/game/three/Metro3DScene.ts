@@ -198,7 +198,7 @@ export class Metro3DScene {
     this.renderer.setSize(width, height, false);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.08;
     this.renderer.shadowMap.enabled = !this.isSoftwareGl;
     if (!this.isSoftwareGl) {
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -224,7 +224,7 @@ export class Metro3DScene {
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
     this.scene.environment = this.envRT.texture;
-    this.scene.environmentIntensity = 0.48;
+    this.scene.environmentIntensity = 0.56;
     pmrem.dispose();
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.15, 460);

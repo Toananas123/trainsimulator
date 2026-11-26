@@ -15,7 +15,7 @@ function finalizeColorTex(
 ): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = Math.min(maxAnisotropy, 8);
+  tex.anisotropy = Math.min(maxAnisotropy, 16);
   if (repeatX !== 1 || repeatY !== 1) {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
@@ -33,7 +33,7 @@ function finalizeDataTex(
 ): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.NoColorSpace;
-  tex.anisotropy = Math.min(maxAnisotropy, 8);
+  tex.anisotropy = Math.min(maxAnisotropy, 16);
   if (repeatX !== 1 || repeatY !== 1) {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
@@ -112,7 +112,7 @@ export function createStationMasonryTextures(maxAnisotropy: number): {
   bumpMap: THREE.CanvasTexture;
   normalMap: THREE.CanvasTexture;
 } {
-  const size = 512;
+  const size = 1024;
   const colorCanvas = document.createElement('canvas');
   colorCanvas.width = size;
   colorCanvas.height = size;
@@ -216,7 +216,7 @@ export function createTunnelConcreteTextures(maxAnisotropy: number): {
   normalMap: THREE.CanvasTexture;
   roughnessMap: THREE.CanvasTexture;
 } {
-  const size = 512;
+  const size = 1024;
   const cCanvas = document.createElement('canvas');
   cCanvas.width = size;
   cCanvas.height = size;
@@ -317,7 +317,7 @@ export function createPlatformDeckTextures(maxAnisotropy: number): {
   normalMap: THREE.CanvasTexture;
   roughnessMap: THREE.CanvasTexture;
 } {
-  const size = 512;
+  const size = 1024;
   const cCanvas = document.createElement('canvas');
   cCanvas.width = size;
   cCanvas.height = size;
@@ -781,55 +781,125 @@ export function createWindshieldRainTexture(maxAnisotropy: number): THREE.Canvas
   return finalizeColorTex(canvas, maxAnisotropy);
 }
 
-/** Realistic Alstom MP14 exterior brushed carbody panel seams & louver grille texture */
+/** High-resolution brushed aluminium and painted train body panels (Albedo + Normal + Roughness). */
 export function createTrainBodyPanelTexture(maxAnisotropy: number): {
   map: THREE.CanvasTexture;
   normalMap: THREE.CanvasTexture;
+  roughnessMap: THREE.CanvasTexture;
 } {
-  const size = 256;
-  const cCanvas = document.createElement('canvas');
-  cCanvas.width = size;
-  cCanvas.height = size;
-  const ctx = cCanvas.getContext('2d')!;
+  const size = 1024;
+  const colorCanvas = document.createElement('canvas');
+  colorCanvas.width = size;
+  colorCanvas.height = size;
+  const ctx = colorCanvas.getContext('2d')!;
+  const heightCanvas = document.createElement('canvas');
+  heightCanvas.width = size;
+  heightCanvas.height = size;
+  const hctx = heightCanvas.getContext('2d')!;
+  const roughCanvas = document.createElement('canvas');
+  roughCanvas.width = size;
+  roughCanvas.height = size;
+  const rctx = roughCanvas.getContext('2d')!;
 
-  const bCanvas = document.createElement('canvas');
-  bCanvas.width = size;
-  bCanvas.height = size;
-  const bctx = bCanvas.getContext('2d')!;
-
-  ctx.fillStyle = '#F2F6FA';
+  const base = ctx.createLinearGradient(0, 0, size, size);
+  base.addColorStop(0, '#fbfdff');
+  base.addColorStop(0.38, '#e5ebf1');
+  base.addColorStop(0.56, '#f8fafc');
+  base.addColorStop(1, '#d9e1e9');
+  ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
-  bctx.fillStyle = '#C8C8C8';
-  bctx.fillRect(0, 0, size, size);
+  hctx.fillStyle = '#b8b8b8';
+  hctx.fillRect(0, 0, size, size);
+  rctx.fillStyle = '#bcbcbc';
+  rctx.fillRect(0, 0, size, size);
 
-  // Brushed aluminum vertical panel seams & subtle specular sheen variation
-  for (let x = 0; x < size; x += 64) {
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.14)';
+  // Individual body bays with pressed folds and subtle reflected highlights.
+  for (let x = 0; x < size; x += 128) {
+    const panel = ctx.createLinearGradient(x, 0, x + 128, 0);
+    panel.addColorStop(0, 'rgba(30,45,65,0.11)');
+    panel.addColorStop(0.08, 'rgba(255,255,255,0.55)');
+    panel.addColorStop(0.42, 'rgba(255,255,255,0.02)');
+    panel.addColorStop(0.82, 'rgba(115,132,151,0.12)');
+    panel.addColorStop(1, 'rgba(16,28,42,0.18)');
+    ctx.fillStyle = panel;
+    ctx.fillRect(x + 3, 0, 122, size);
+    ctx.fillStyle = 'rgba(20,32,48,0.16)';
     ctx.fillRect(x, 0, 2, size);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.fillRect(x + 2, 0, 1.5, size);
-
-    bctx.fillStyle = '#484848';
-    bctx.fillRect(x, 0, 2, size);
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.fillRect(x + 3, 0, 1.5, size);
+    hctx.fillStyle = '#525252';
+    hctx.fillRect(x, 0, 3, size);
+    hctx.fillStyle = '#dedede';
+    hctx.fillRect(x + 3, 0, 2, size);
+    const rv = Math.floor(216 + hash2d(x, 29) * 30);
+    rctx.fillStyle = 'rgb(' + rv + ',' + rv + ',' + rv + ')';
+    rctx.fillRect(x + 4, 0, 120, size);
   }
 
-  // Subtle horizontal trim seam + rivet dots
-  ctx.fillStyle = 'rgba(30, 41, 59, 0.12)';
-  ctx.fillRect(0, 128, size, 2);
-  bctx.fillStyle = '#585858';
-  bctx.fillRect(0, 128, size, 2);
+  // Horizontal panel joins and hatch reveals.
+  for (const y of [256, 512, 768]) {
+    ctx.fillStyle = 'rgba(28,42,58,0.13)';
+    ctx.fillRect(0, y, size, 3);
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.fillRect(0, y + 3, size, 2);
+    hctx.fillStyle = '#3b3b3b';
+    hctx.fillRect(0, y, size, 4);
+    hctx.fillStyle = '#dedede';
+    hctx.fillRect(0, y + 4, size, 2);
+    rctx.fillStyle = '#a0a0a0';
+    rctx.fillRect(0, y, size, 6);
+  }
 
-  for (let x = 10; x < size; x += 32) {
-    ctx.fillStyle = 'rgba(71, 85, 105, 0.28)';
+  // Fine longitudinal brushed grain.
+  for (let i = 0; i < 6200; i++) {
+    const x = Math.floor(hash2d(i, 41) * size);
+    const y = Math.floor(hash2d(i, 43) * size);
+    const len = 5 + hash2d(i, 47) * 54;
+    const bright = hash2d(i, 53) > 0.48;
+    ctx.strokeStyle = bright ? 'rgba(255,255,255,0.12)' : 'rgba(55,70,88,0.055)';
+    ctx.lineWidth = 0.55 + hash2d(i, 59) * 0.65;
     ctx.beginPath();
-    ctx.arc(x, 120, 1.5, 0, Math.PI * 2);
-    ctx.arc(x, 138, 1.5, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, Math.min(size, y + len));
+    ctx.stroke();
+    hctx.strokeStyle = bright ? 'rgba(220,220,220,0.12)' : 'rgba(58,58,58,0.08)';
+    hctx.lineWidth = 1;
+    hctx.beginPath();
+    hctx.moveTo(x, y);
+    hctx.lineTo(x, Math.min(size, y + len));
+    hctx.stroke();
+  }
+
+  // Captive rivets, paint scuffs and accumulated fine dirt.
+  for (let x = 24; x < size; x += 32) {
+    for (const y of [244, 268, 500, 524, 756, 780]) {
+      ctx.fillStyle = 'rgba(46,60,78,0.42)';
+      ctx.beginPath();
+      ctx.arc(x, y, 2.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.beginPath();
+      ctx.arc(x - 0.65, y - 0.7, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+      hctx.fillStyle = '#444444';
+      hctx.fillRect(x - 2, y - 2, 4, 4);
+    }
+  }
+  for (let i = 0; i < 720; i++) {
+    const x = hash2d(i, 61) * size;
+    const y = hash2d(i, 67) * size;
+    ctx.strokeStyle = 'rgba(64,78,96,' + (0.025 + hash2d(i, 71) * 0.06) + ')';
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 1 + hash2d(i, 73) * 7, y + 3 + hash2d(i, 79) * 28);
+    ctx.stroke();
   }
 
   return {
-    map: finalizeColorTex(cCanvas, maxAnisotropy, 6, 1),
-    normalMap: createNormalMapFromHeightCanvas(bCanvas, 1.5, maxAnisotropy, 6, 1),
+    map: finalizeColorTex(colorCanvas, maxAnisotropy, 6, 1),
+    normalMap: createNormalMapFromHeightCanvas(heightCanvas, 1.9, maxAnisotropy, 6, 1),
+    roughnessMap: finalizeDataTex(roughCanvas, maxAnisotropy, 6, 1),
   };
 }
 
@@ -989,7 +1059,7 @@ export function createSuburbanBrickMasonryTextures(maxAnisotropy: number): {
   map: THREE.CanvasTexture;
   normalMap: THREE.CanvasTexture;
 } {
-  const size = 512;
+  const size = 1024;
   const cCanvas = document.createElement('canvas');
   cCanvas.width = size;
   cCanvas.height = size;
@@ -1041,76 +1111,243 @@ export function createSuburbanBrickMasonryTextures(maxAnisotropy: number): {
   };
 }
 
-/** Daylight suburban Parisian sky dome / open-cut horizon backdrop texture for Vincennes */
+/** High-resolution daylight sky with layered cumulus, fine cirrus, sun bloom and horizon haze. */
 export function createSuburbanSkyTexture(maxAnisotropy: number): THREE.CanvasTexture {
+  const width = 1536;
+  const height = 512;
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 256;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  const grad = ctx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, '#1D4ED8');
-  grad.addColorStop(0.42, '#60A5FA');
-  grad.addColorStop(0.78, '#BAE6FD');
-  grad.addColorStop(1, '#F1F5F9');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 512, 256);
+  const sky = ctx.createLinearGradient(0, 0, 0, height);
+  sky.addColorStop(0, '#2764a8');
+  sky.addColorStop(0.28, '#5796cc');
+  sky.addColorStop(0.58, '#9cc6e2');
+  sky.addColorStop(0.82, '#d7e5eb');
+  sky.addColorStop(1, '#f4e5d1');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, width, height);
 
-  // Soft sunlit cirrus clouds
-  for (let i = 0; i < 18; i++) {
-    const cx = hash2d(i, 211) * 512;
-    const cy = 48 + hash2d(i, 223) * 115;
-    const rx = 38 + hash2d(i, 227) * 68;
-    const ry = 10 + hash2d(i, 229) * 16;
-    const cGrad = ctx.createRadialGradient(cx, cy, 4, cx, cy, rx);
-    cGrad.addColorStop(0, 'rgba(255, 255, 255, 0.52)');
-    cGrad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
-    ctx.fillStyle = cGrad;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(1, ry / rx);
-    ctx.beginPath();
-    ctx.arc(0, 0, rx, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+  const haze = ctx.createLinearGradient(0, height * 0.58, 0, height);
+  haze.addColorStop(0, 'rgba(235,244,248,0)');
+  haze.addColorStop(0.72, 'rgba(248,239,222,0.42)');
+  haze.addColorStop(1, 'rgba(255,244,225,0.82)');
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, 0, width, height);
+
+  // A soft sun disc, broad atmospheric halo and broken cloud banks.
+  const sunX = 1170;
+  const sunY = 150;
+  const halo = ctx.createRadialGradient(sunX, sunY, 9, sunX, sunY, 240);
+  halo.addColorStop(0, 'rgba(255,248,221,0.52)');
+  halo.addColorStop(0.24, 'rgba(255,246,224,0.19)');
+  halo.addColorStop(1, 'rgba(255,246,224,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(sunX - 240, sunY - 240, 480, 480);
+  const sun = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, 48);
+  sun.addColorStop(0, 'rgba(255,255,245,0.96)');
+  sun.addColorStop(0.5, 'rgba(255,248,225,0.54)');
+  sun.addColorStop(1, 'rgba(255,245,221,0)');
+  ctx.fillStyle = sun;
+  ctx.fillRect(sunX - 48, sunY - 48, 96, 96);
+
+  for (let bank = 0; bank < 11; bank++) {
+    const cx = hash2d(bank, 211) * width;
+    const cy = 78 + hash2d(bank, 223) * 210;
+    const bw = 85 + hash2d(bank, 227) * 170;
+    const bh = 16 + hash2d(bank, 229) * 30;
+    for (let lobe = 0; lobe < 10; lobe++) {
+      const lx = cx + (hash2d(bank * 19 + lobe, 233) - 0.5) * bw;
+      const ly = cy + (hash2d(bank * 19 + lobe, 239) - 0.5) * bh;
+      const rx = 20 + hash2d(bank * 23 + lobe, 241) * 62;
+      const ry = 8 + hash2d(bank * 23 + lobe, 251) * 19;
+      const cloud = ctx.createRadialGradient(lx, ly, 2, lx, ly, rx);
+      cloud.addColorStop(0, 'rgba(255,255,255,0.55)');
+      cloud.addColorStop(0.42, 'rgba(250,253,255,0.24)');
+      cloud.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.scale(1, ry / rx);
+      ctx.fillStyle = cloud;
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
+  // Wispy high-altitude cirrus and broad, very subtle cloud shadows.
+  for (let i = 0; i < 360; i++) {
+    const x = hash2d(i, 271) * width;
+    const y = 24 + hash2d(i, 277) * 190;
+    const len = 12 + hash2d(i, 281) * 85;
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.035 + hash2d(i, 283) * 0.075) + ')';
+    ctx.lineWidth = 0.6 + hash2d(i, 293) * 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + len * 0.5, y - 2.5, x + len, y - 5);
+    ctx.stroke();
+  }
+  for (let i = 0; i < 20; i++) {
+    const x = hash2d(i, 301) * width;
+    const y = 120 + hash2d(i, 307) * 220;
+    const radius = 65 + hash2d(i, 311) * 95;
+    const shade = ctx.createRadialGradient(x, y, 2, x, y, radius);
+    shade.addColorStop(0, 'rgba(55,91,128,0.055)');
+    shade.addColorStop(1, 'rgba(55,91,128,0)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
   return finalizeColorTex(canvas, maxAnisotropy);
+}
+
+/** Procedural Parisian residential facade atlas: stone courses, tall sash windows, cornices and balconies. */
+export function createDistantFacadeTexture(maxAnisotropy: number): {
+  map: THREE.CanvasTexture;
+  normalMap: THREE.CanvasTexture;
+} {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const heightCanvas = document.createElement('canvas');
+  heightCanvas.width = size;
+  heightCanvas.height = size;
+  const hctx = heightCanvas.getContext('2d')!;
+
+  const facade = ctx.createLinearGradient(0, 0, size, size);
+  facade.addColorStop(0, '#d9c9ad');
+  facade.addColorStop(0.45, '#c5b49a');
+  facade.addColorStop(1, '#a99a84');
+  ctx.fillStyle = facade;
+  ctx.fillRect(0, 0, size, size);
+  hctx.fillStyle = '#b8b8b8';
+  hctx.fillRect(0, 0, size, size);
+
+  for (let y = 0; y < size; y += 64) {
+    const n = hash2d(y, 331);
+    ctx.fillStyle = 'rgba(255,245,225,' + (0.09 + n * 0.09) + ')';
+    ctx.fillRect(0, y, size, 3);
+    ctx.fillStyle = 'rgba(65,53,42,0.12)';
+    ctx.fillRect(0, y + 61, size, 3);
+    hctx.fillStyle = '#686868';
+    hctx.fillRect(0, y + 61, size, 3);
+  }
+
+  // Five storeys of tall windows with stone surrounds, reflected glass and balcony rails.
+  for (let row = 0; row < 5; row++) {
+    const y = 28 + row * 96;
+    for (let col = 0; col < 4; col++) {
+      const x = 34 + col * 122;
+      const w = 48 + (col % 2) * 4;
+      const h = 62;
+      ctx.fillStyle = '#8e7d68';
+      ctx.fillRect(x - 7, y - 7, w + 14, h + 14);
+      ctx.fillStyle = '#e6dac5';
+      ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+      const glass = ctx.createLinearGradient(x, y, x + w, y + h);
+      glass.addColorStop(0, '#243f57');
+      glass.addColorStop(0.42, '#5e8197');
+      glass.addColorStop(0.7, '#314a60');
+      glass.addColorStop(1, '#192e42');
+      ctx.fillStyle = glass;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = 'rgba(224,240,247,0.42)';
+      ctx.fillRect(x + 5, y + 4, 3, h - 8);
+      ctx.fillRect(x + w * 0.5 - 1, y, 2, h);
+      ctx.fillRect(x, y + h * 0.52, w, 2);
+      ctx.fillStyle = '#d8c7aa';
+      ctx.fillRect(x - 10, y + h + 5, w + 20, 7);
+      ctx.fillStyle = '#2d3b45';
+      ctx.fillRect(x - 12, y + h + 13, w + 24, 3);
+      for (let rail = 0; rail < 5; rail++) {
+        ctx.fillRect(x - 10 + rail * ((w + 20) / 4), y + h + 6, 2, 11);
+      }
+      hctx.fillStyle = '#555555';
+      hctx.fillRect(x - 5, y - 5, w + 10, h + 10);
+      hctx.fillStyle = '#dddddd';
+      hctx.fillRect(x + 4, y + 5, w - 8, h - 10);
+    }
+  }
+
+  // Cornices, roof-line and ground-floor commercial frontage.
+  ctx.fillStyle = '#746452';
+  ctx.fillRect(0, 448, size, 64);
+  ctx.fillStyle = '#e6d6bd';
+  ctx.fillRect(0, 438, size, 9);
+  ctx.fillStyle = '#84715a';
+  ctx.fillRect(0, 429, size, 4);
+  for (let x = 12; x < size; x += 22) {
+    ctx.fillStyle = 'rgba(255,242,216,0.25)';
+    ctx.fillRect(x, 451, 2, 56);
+  }
+  for (let i = 0; i < 4200; i++) {
+    const x = Math.floor(hash2d(i, 337) * size);
+    const y = Math.floor(hash2d(i, 347) * size);
+    ctx.fillStyle = hash2d(i, 349) > 0.5 ? 'rgba(255,248,232,0.055)' : 'rgba(65,53,43,0.045)';
+    ctx.fillRect(x, y, 1, 1);
+  }
+  return {
+    map: finalizeColorTex(canvas, maxAnisotropy),
+    normalMap: createNormalMapFromHeightCanvas(heightCanvas, 1.8, maxAnisotropy),
+  };
 }
 
 /** Steel-mullioned glazed marquise skylight texture for suburban RER A canopies */
 export function createCanopyGlassTexture(maxAnisotropy: number): THREE.CanvasTexture {
+  const size = 512;
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext('2d')!;
-
-  ctx.fillStyle = '#93C5FD';
-  ctx.fillRect(0, 0, 256, 256);
-
-  // Skylight glare bands
-  const grad = ctx.createLinearGradient(0, 0, 256, 256);
-  grad.addColorStop(0, 'rgba(255,255,255,0.45)');
-  grad.addColorStop(0.5, 'rgba(224,242,254,0.2)');
-  grad.addColorStop(1, 'rgba(255,255,255,0.4)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 256, 256);
-
-  ctx.strokeStyle = '#1E3A34';
-  ctx.lineWidth = 10;
-  for (let x = 0; x <= 256; x += 64) {
+  const glass = ctx.createLinearGradient(0, 0, size, size);
+  glass.addColorStop(0, '#a9d4ef');
+  glass.addColorStop(0.28, '#d7eaf4');
+  glass.addColorStop(0.55, '#8cb7d0');
+  glass.addColorStop(1, '#d9e9ef');
+  ctx.fillStyle = glass;
+  ctx.fillRect(0, 0, size, size);
+  const glare = ctx.createLinearGradient(0, 0, size, size);
+  glare.addColorStop(0, 'rgba(255,255,255,0.56)');
+  glare.addColorStop(0.36, 'rgba(235,247,255,0.08)');
+  glare.addColorStop(0.68, 'rgba(255,255,255,0.2)');
+  glare.addColorStop(1, 'rgba(255,255,255,0.48)');
+  ctx.fillStyle = glare;
+  ctx.fillRect(0, 0, size, size);
+  for (let i = 0; i < 620; i++) {
+    const x = hash2d(i, 353) * size;
+    const y = hash2d(i, 359) * size;
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.035 + hash2d(i, 367) * 0.08) + ')';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 2 + hash2d(i, 373) * 7, y + 2 + hash2d(i, 379) * 22);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = '#1e3a34';
+  ctx.lineWidth = 12;
+  for (let x = 0; x <= size; x += 128) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x, 256);
+    ctx.lineTo(x, size);
     ctx.stroke();
   }
-  ctx.lineWidth = 6;
-  for (let y = 0; y <= 256; y += 128) {
+  ctx.lineWidth = 7;
+  for (let y = 0; y <= size; y += 128) {
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(256, y);
+    ctx.lineTo(size, y);
     ctx.stroke();
   }
-
+  ctx.strokeStyle = 'rgba(255,255,255,0.64)';
+  ctx.lineWidth = 2;
+  for (let x = 6; x <= size; x += 128) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, size);
+    ctx.stroke();
+  }
   return finalizeColorTex(canvas, maxAnisotropy, 12, 1);
 }

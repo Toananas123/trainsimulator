@@ -88,25 +88,33 @@ export function createMP14Train(
   const bodyPanelTex = createTrainBodyPanelTexture(maxAnisotropy);
   trackTex(bodyPanelTex.map);
   trackTex(bodyPanelTex.normalMap);
+  trackTex(bodyPanelTex.roughnessMap);
 
   // --- Shared Exterior PBR Materials ---
   const whiteBodyMat = trackMat(
-    new THREE.MeshStandardMaterial({
+    new THREE.MeshPhysicalMaterial({
       map: bodyPanelTex.map,
       normalMap: bodyPanelTex.normalMap,
-      normalScale: new THREE.Vector2(0.85, 0.85),
+      normalScale: new THREE.Vector2(0.9, 0.9),
+      roughnessMap: bodyPanelTex.roughnessMap,
       color: 0xeaf0f6,
-      roughness: 0.24,
-      metalness: 0.22,
+      roughness: 0.3,
+      metalness: 0.18,
+      clearcoat: 0.48,
+      clearcoatRoughness: 0.24,
     })
   );
   const turquoiseMat = trackMat(
-    new THREE.MeshStandardMaterial({
+    new THREE.MeshPhysicalMaterial({
+      map: bodyPanelTex.map,
       normalMap: bodyPanelTex.normalMap,
-      normalScale: new THREE.Vector2(0.65, 0.65),
+      normalScale: new THREE.Vector2(0.75, 0.75),
+      roughnessMap: bodyPanelTex.roughnessMap,
       color: new THREE.Color(isRer ? COLORS.rerARed : COLORS.ratpTurquoise),
-      roughness: 0.26,
-      metalness: 0.24,
+      roughness: 0.31,
+      metalness: 0.16,
+      clearcoat: 0.34,
+      clearcoatRoughness: 0.28,
     })
   );
   const purpleAccentMat = trackMat(
@@ -152,7 +160,10 @@ export function createMP14Train(
       transparent: true,
       opacity: isSoftwareGl ? 0.44 : 0.36,
       transmission: 0,
-      reflectivity: 0.9,
+      reflectivity: 0.92,
+      ior: 1.48,
+      clearcoat: 0.4,
+      clearcoatRoughness: 0.08,
     })
   );
   const doorFrameMat = trackMat(
