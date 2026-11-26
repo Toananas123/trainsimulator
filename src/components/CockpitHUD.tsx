@@ -195,7 +195,7 @@ export const CockpitHUD: React.FC<CockpitHUDProps> = ({
   return (
     <section
       aria-label="Metro Train Cockpit Controls"
-      className="w-full bg-gradient-to-b from-[#202938] via-[#151C28] to-[#0C111B] border-t-[3px] border-slate-500/80 shadow-[inset_0_2px_0_rgba(255,255,255,0.14),inset_0_-8px_20px_rgba(0,0,0,0.65)] flex flex-col justify-between shrink-0"
+      className="w-full bg-gradient-to-b from-[#202938] via-[#151C28] to-[#0C111B] border-t-[3px] border-slate-500/80 shadow-[inset_0_2px_0_rgba(255,255,255,0.14),inset_0_-8px_20px_rgba(0,0,0,0.65)] flex flex-col justify-between shrink-0 remaster-cockpit"
       style={{ height: '35vh', minHeight: '225px', maxHeight: '320px' }}
     >
       {/* Main 4-Module Physical RATP Driver Desk (Pupitre de Conduite) */}

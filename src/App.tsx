@@ -558,6 +558,7 @@ export default function App() {
       >
         {/* Isolated WebGL mount node (never re-rendered by HUD siblings) */}
         <div ref={webglMountRef} className="w-full h-full" />
+        <div className="cinematic-vignette" aria-hidden="true" />
 
         {/* Lightweight Zero-Blur Station Alignment Guide, Eco Dashboard, Radar Flash & Door Quick-Controls */}
         <ViewportOverlays

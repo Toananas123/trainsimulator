@@ -50,16 +50,17 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
     >
       {/* Left-weighted dark scrim preserving crisp 3D view of terminus station & rolling stock */}
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'linear-gradient(90deg, rgba(11,17,32,0.94) 0%, rgba(11,17,32,0.80) 47%, rgba(11,17,32,0.10) 100%)',
-        }}
+        className="absolute inset-0 pointer-events-none remaster-title-scrim"
       />
 
       {/* Asymmetric left-third RATP Transit Plaque Lockup */}
       <div className="relative z-10 flex-1 flex items-center px-6 sm:px-12 lg:px-16">
-        <div className="max-w-xl pointer-events-auto">
+        <div className="max-w-xl pointer-events-auto remaster-title-panel">
+          <div className="remaster-kicker">
+            <span>RATP · OPERATIONS SIMULATOR</span>
+            <span className="remaster-kicker-status"><i /> SYSTEM READY</span>
+          </div>
+
           {/* Bespoke inline SVG Transit Emblem (M14 or RER A) */}
           <svg
             viewBox="0 0 490 56"
@@ -153,6 +154,12 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
               ? 'Pilot a double-decker 3D MI09 express under 1500V catenary wires across outdoor western & eastern suburban lines and central underground halls including La Défense.'
               : 'Drive an articulated 3D MP14 train through all 21 Line 14 stations and ribbed TBM tunnels. Switch live between Side, Conductor Cab, and Chase 3D views.'}
           </p>
+
+          <div className="remaster-spec-strip" aria-label="Train specifications">
+            <div><span>ROLLING STOCK</span><strong>{isRer ? 'MI09 · 2-LEVEL' : 'MP14 · 8-CAR'}</strong></div>
+            <div><span>NETWORK</span><strong>{isRer ? 'RER A' : 'METRO 14'}</strong></div>
+            <div><span>CAMERAS</span><strong>04 PERSPECTIVES</strong></div>
+          </div>
 
           {/* Service Line Selector (Metro 14 vs RER A Express) */}
           <div className="mt-3 flex flex-wrap items-center gap-2">

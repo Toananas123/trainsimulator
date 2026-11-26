@@ -126,6 +126,8 @@ const _skyOutdoorFogColor = new THREE.Color(0xcbd5e1);
 const _hemiGroundUnderground = new THREE.Color(0x0e1422);
 const _hemiGroundOutdoor = new THREE.Color(0x3a4d36);
 const _currentFogColor = new THREE.Color(0x060b16);
+const _sunlitKeyColor = new THREE.Color(0xffe7cc);
+const _tunnelKeyColor = new THREE.Color(0xc5d9f4);
 
 export interface Metro3DSceneCallbacks {
   getState: () => SimulationState;
@@ -152,6 +154,7 @@ export class Metro3DScene {
   private world: Metro3DWorld;
   private hemiLight: THREE.HemisphereLight;
   private keyDirLight: THREE.DirectionalLight;
+  private fillLight: THREE.DirectionalLight;
   private isSoftwareGl: boolean;
   private maxAniso: number;
   private currentLineMode: LineMode;
@@ -195,10 +198,10 @@ export class Metro3DScene {
     this.renderer.setSize(width, height, false);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.04;
+    this.renderer.toneMappingExposure = 1.1;
     this.renderer.shadowMap.enabled = !this.isSoftwareGl;
     if (!this.isSoftwareGl) {
-      this.renderer.shadowMap.type = THREE.PCFShadowMap;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     }
 
     const domEl = this.renderer.domElement;
@@ -221,7 +224,7 @@ export class Metro3DScene {
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
     this.scene.environment = this.envRT.texture;
-    this.scene.environmentIntensity = 0.42;
+    this.scene.environmentIntensity = 0.48;
     pmrem.dispose();
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.15, 460);
@@ -234,9 +237,24 @@ export class Metro3DScene {
     this.keyDirLight.position.set(18, 26, 22);
     if (!this.isSoftwareGl) {
       this.keyDirLight.castShadow = true;
-      this.keyDirLight.shadow.mapSize.set(1024, 1024);
+      this.keyDirLight.shadow.mapSize.set(2048, 2048);
+      this.keyDirLight.shadow.camera.near = 1;
+      this.keyDirLight.shadow.camera.far = 100;
+      this.keyDirLight.shadow.camera.left = -34;
+      this.keyDirLight.shadow.camera.right = 34;
+      this.keyDirLight.shadow.camera.top = 30;
+      this.keyDirLight.shadow.camera.bottom = -30;
+      this.keyDirLight.shadow.camera.updateProjectionMatrix();
+      this.keyDirLight.shadow.bias = -0.00008;
+      this.keyDirLight.shadow.normalBias = 0.025;
+      this.keyDirLight.shadow.radius = 3;
     }
     this.scene.add(this.keyDirLight);
+
+    // Cool secondary bounce light adds shape to the train without flattening tunnel contrast.
+    this.fillLight = new THREE.DirectionalLight(0xb9d3f2, 0.16);
+    this.fillLight.position.set(-22, 9, -18);
+    this.scene.add(this.fillLight);
 
     const maxAniso = this.renderer.capabilities.getMaxAnisotropy();
     this.maxAniso = maxAniso;
@@ -429,9 +447,12 @@ export class Metro3DScene {
 
     const targetHemi = outdoor ? (state.weather === 'fog' ? 0.92 : 1.18) : 0.45;
     const targetKey = outdoor ? (state.weather === 'fog' ? 1.15 : 1.65) : 1.05;
-    const targetEnv = outdoor ? 0.72 : 0.42;
+    const targetEnv = outdoor ? 0.76 : 0.48;
+    const targetFill = outdoor ? (state.weather === 'fog' ? 0.5 : 0.38) : 0.16;
     this.hemiLight.intensity = THREE.MathUtils.damp(this.hemiLight.intensity, targetHemi, 3.8, dt);
     this.keyDirLight.intensity = THREE.MathUtils.damp(this.keyDirLight.intensity, targetKey, 3.8, dt);
+    this.keyDirLight.color.lerp(outdoor ? _sunlitKeyColor : _tunnelKeyColor, Math.min(1, dt * 2.6));
+    this.fillLight.intensity = THREE.MathUtils.damp(this.fillLight.intensity, targetFill, 3.2, dt);
     this.scene.environmentIntensity = THREE.MathUtils.damp(
       this.scene.environmentIntensity,
       targetEnv,
