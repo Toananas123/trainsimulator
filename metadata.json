@@ -1,0 +1,8 @@
+{
+  "name": "Paris Metro Line 14 Simulator",
+  "description": "A modern 2D side-scrolling Paris Metro Line 14 driving simulator with realistic rubber-tired physics, platform screen doors, cockpit HUD, and synthesized Web Audio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
