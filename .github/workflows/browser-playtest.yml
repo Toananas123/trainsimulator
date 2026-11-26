@@ -1,0 +1,66 @@
+name: Browser playtest
+
+on:
+  push:
+    branches:
+      - realism-remaster
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-playtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out remaster
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install application dependencies
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-audit --no-fund --package-lock=false playwright
+          npx playwright install --with-deps chromium
+
+      - name: Type-check and production build
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Start Vite preview server
+        run: |
+          nohup npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/vite-preview.log 2>&1 &
+          echo $! > /tmp/vite-preview.pid
+          for attempt in $(seq 1 40); do
+            if curl --silent --fail http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/vite-preview.log
+          exit 1
+
+      - name: Run Chromium interaction checks
+        run: node scripts/browser-smoke.mjs
+        env:
+          BASE_URL: http://127.0.0.1:4173
+
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: realism-remaster-browser-shots
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
