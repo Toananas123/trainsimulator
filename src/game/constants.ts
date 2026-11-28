@@ -351,11 +351,11 @@ export const PHYSICS = {
   goodAlignM: 3.8,
   maxAllowedAlignM: 7.5,
   /** Door animation durations (seconds) */
-  doorOpenDuration: 1.4,
-  doorWarningDuration: 1.6,
-  doorCloseDuration: 1.3,
-  /** Base boarding duration (seconds), scaled by station crowd density */
-  baseBoardingDuration: 4.5,
+  doorOpenDuration: 2.4,
+  doorWarningDuration: 2.7,
+  doorCloseDuration: 2.3,
+  /** Base passenger flow duration (seconds), scaled by station crowd density */
+  baseBoardingDuration: 16,
 } as const;
 
 /**

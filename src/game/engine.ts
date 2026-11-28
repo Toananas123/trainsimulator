@@ -272,9 +272,9 @@ export interface FinalGradeSummary {
 }
 
 export const WEATHER_SEQUENCE: WeatherType[] = ['clear', 'fog'];
-export const WEATHER_CYCLE_INTERVAL_SEC = 52;
+export const WEATHER_CYCLE_INTERVAL_SEC = 600;
 export const RUSH_HOUR_SEQUENCE: RushHourPeriod[] = ['off_peak', 'normal', 'rush_hour'];
-export const RUSH_HOUR_CYCLE_INTERVAL_SEC = 75;
+export const RUSH_HOUR_CYCLE_INTERVAL_SEC = 900;
 export const CLEAR_TRACK_FRICTION_MULTIPLIER = 1.0;
 export const FOG_TRACK_FRICTION_MULTIPLIER = 0.94;
 export const WET_BRAKING_GRIP_MULTIPLIER = 0.82;
@@ -698,15 +698,16 @@ export function calculateStationScore(
     alignmentBonus = -150;
   }
 
-  // Punctuality: within ±5s is full bonus, smoothly drops off
+  // Timetable precision: retain a demanding target without making a longer leg
+  // disproportionately harder to score than a short metro hop.
   const absTimeErr = Math.abs(legDeltaSec);
   let punctualityBonus = 0;
-  if (absTimeErr <= 5) {
+  if (absTimeErr <= 8) {
     punctualityBonus = 250;
-  } else if (absTimeErr <= 12) {
-    punctualityBonus = Math.round(250 - (absTimeErr - 5) * 20);
+  } else if (absTimeErr <= 20) {
+    punctualityBonus = Math.round(250 - (absTimeErr - 8) * 14);
   } else {
-    punctualityBonus = Math.max(0, Math.round(110 - (absTimeErr - 12) * 8));
+    punctualityBonus = Math.max(0, Math.round(82 - (absTimeErr - 20) * 4));
   }
 
   // Comfort & Mood bonus (0..150)
@@ -844,7 +845,7 @@ export function pushFeedback(
     detail,
     pointsDelta,
     tone,
-    remainingSec: 3.4,
+    remainingSec: 5.2,
   };
 }
 
@@ -1074,7 +1075,7 @@ export function stepSimulation(state: SimulationState, rawDt: number): void {
       }
     } else {
       state.excessDwellSec += dt;
-      if (state.excessDwellSec > 3.5) {
+      if (state.excessDwellSec > 8) {
         dwellComfortDrain = true;
         state.comfort = Math.max(0, state.comfort - 4.2 * dt);
         state.moodReason = 'Long dwell time';

@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import type { SimulationState } from '../engine';
 import { getDirectedRoute, isPositionOutdoor, type LineMode, type RouteDirection } from '../lines';
 import { createMP14Train, type MP14TrainRig } from './trainModel';
@@ -154,7 +160,10 @@ export class Metro3DScene {
   private world: Metro3DWorld;
   private hemiLight: THREE.HemisphereLight;
   private keyDirLight: THREE.DirectionalLight;
+  private keyLightTarget: THREE.Object3D;
   private fillLight: THREE.DirectionalLight;
+  private composer: EffectComposer | null = null;
+  private postProcessingPasses: Array<{ dispose: () => void }> = [];
   private isSoftwareGl: boolean;
   private maxAniso: number;
   private currentLineMode: LineMode;
@@ -234,20 +243,24 @@ export class Metro3DScene {
     this.scene.add(this.hemiLight);
 
     this.keyDirLight = new THREE.DirectionalLight(0xfff1dc, 1.05);
-    this.keyDirLight.position.set(18, 26, 22);
+    this.keyLightTarget = new THREE.Object3D();
+    this.keyLightTarget.position.set(initState.trainX, 0, 0);
+    this.keyDirLight.target = this.keyLightTarget;
+    this.keyDirLight.position.set(initState.trainX + 18, 26, 22);
+    this.scene.add(this.keyLightTarget);
     if (!this.isSoftwareGl) {
       this.keyDirLight.castShadow = true;
-      this.keyDirLight.shadow.mapSize.set(2048, 2048);
+      this.keyDirLight.shadow.mapSize.set(4096, 4096);
       this.keyDirLight.shadow.camera.near = 1;
-      this.keyDirLight.shadow.camera.far = 100;
-      this.keyDirLight.shadow.camera.left = -34;
-      this.keyDirLight.shadow.camera.right = 34;
-      this.keyDirLight.shadow.camera.top = 30;
-      this.keyDirLight.shadow.camera.bottom = -30;
+      this.keyDirLight.shadow.camera.far = 150;
+      this.keyDirLight.shadow.camera.left = -46;
+      this.keyDirLight.shadow.camera.right = 46;
+      this.keyDirLight.shadow.camera.top = 34;
+      this.keyDirLight.shadow.camera.bottom = -34;
       this.keyDirLight.shadow.camera.updateProjectionMatrix();
-      this.keyDirLight.shadow.bias = -0.00008;
-      this.keyDirLight.shadow.normalBias = 0.025;
-      this.keyDirLight.shadow.radius = 3;
+      this.keyDirLight.shadow.bias = -0.00012;
+      this.keyDirLight.shadow.normalBias = 0.035;
+      this.keyDirLight.shadow.radius = 4;
     }
     this.scene.add(this.keyDirLight);
 
@@ -265,6 +278,7 @@ export class Metro3DScene {
       this.currentDirection
     );
     this.scene.add(this.world.root);
+    this.applyRealtimeShadows(this.world.root);
 
     this.train = createMP14Train(
       this.isSoftwareGl,
@@ -273,6 +287,8 @@ export class Metro3DScene {
       this.currentDirection
     );
     this.scene.add(this.train.root);
+    this.applyRealtimeShadows(this.train.root);
+    this.setupPostProcessing(width, height);
 
     this.ro = new ResizeObserver(() => this.handleResize());
     this.ro.observe(container);
@@ -281,6 +297,48 @@ export class Metro3DScene {
     // Paint Frame 0 immediately so the Title Screen & first paint never flash black
     this.renderCurrentFrame(0.016);
     this.scheduleNextTick();
+  }
+
+  /** Enable PBR shadow reception and opaque-object casting on hardware GPUs. */
+  private applyRealtimeShadows(root: THREE.Object3D): void {
+    if (this.isSoftwareGl) return;
+    root.traverse((object) => {
+      if (object instanceof THREE.Mesh || object instanceof THREE.InstancedMesh) {
+        const mats = Array.isArray(object.material) ? object.material : [object.material];
+        const pbr = mats.some((material) =>
+          material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial
+        );
+        object.receiveShadow = pbr;
+        object.castShadow = pbr && mats.every((material) => !material.transparent);
+      }
+    });
+  }
+
+  /** Hardware-only post stack: contact shading, restrained light bloom and final AA. */
+  private setupPostProcessing(width: number, height: number): void {
+    if (this.isSoftwareGl) return;
+
+    const composer = new EffectComposer(this.renderer);
+    composer.setPixelRatio(this.renderer.getPixelRatio());
+    composer.setSize(width, height);
+    composer.addPass(new RenderPass(this.scene, this.camera));
+
+    const ssao = new SSAOPass(this.scene, this.camera, width, height, 24);
+    ssao.kernelRadius = 9;
+    ssao.minDistance = 0.0005;
+    ssao.maxDistance = 0.085;
+    ssao.output = SSAOPass.OUTPUT.Default;
+
+    const bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.18, 0.28, 0.86);
+    const output = new OutputPass();
+    const smaa = new SMAAPass();
+    composer.addPass(ssao);
+    composer.addPass(bloom);
+    composer.addPass(output);
+    composer.addPass(smaa);
+
+    this.composer = composer;
+    this.postProcessingPasses = [ssao, bloom, output, smaa];
   }
 
   private handleContextLost = (e: Event) => {
@@ -305,6 +363,7 @@ export class Metro3DScene {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    this.composer?.setSize(w, h);
     if (this.hasSnappedInitial && !this.contextLost) {
       this.renderer.render(this.scene, this.camera);
     }
@@ -369,6 +428,7 @@ export class Metro3DScene {
         this.currentDirection
       );
       this.scene.add(this.world.root);
+      this.applyRealtimeShadows(this.world.root);
       this.train = createMP14Train(
         this.isSoftwareGl,
         this.maxAniso,
@@ -376,6 +436,7 @@ export class Metro3DScene {
         this.currentDirection
       );
       this.scene.add(this.train.root);
+      this.applyRealtimeShadows(this.train.root);
     }
 
     // 1) Compute target camera pose & smoothly damp transitions
@@ -445,6 +506,11 @@ export class Metro3DScene {
       this.scene.background.copy(_currentFogColor);
     }
 
+    // Keep the sun and its shadow frustum centred on the moving train instead of
+    // leaving shadows behind at the origin after the first few hundred metres.
+    this.keyDirLight.position.set(state.trainX + 18, 26, 22);
+    this.keyLightTarget.position.set(state.trainX, 0, 0);
+
     const targetHemi = outdoor ? (state.weather === 'fog' ? 0.92 : 1.18) : 0.45;
     const targetKey = outdoor ? (state.weather === 'fog' ? 1.15 : 1.65) : 1.05;
     const targetEnv = outdoor ? 0.76 : 0.48;
@@ -493,7 +559,11 @@ export class Metro3DScene {
     this.world.update(state, viewMode === 'side', this.camPos, dt);
 
     // 5) Render frame
-    this.renderer.render(this.scene, this.camera);
+    if (this.composer) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   private tick = (now: number): void => {
@@ -536,6 +606,10 @@ export class Metro3DScene {
 
     this.train.dispose();
     this.world.dispose();
+    this.composer?.dispose();
+    this.postProcessingPasses.forEach((pass) => pass.dispose());
+    this.postProcessingPasses = [];
+    this.composer = null;
     this.envRT.dispose();
     this.renderer.dispose();
 

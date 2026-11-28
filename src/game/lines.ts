@@ -410,6 +410,38 @@ export function isPositionOutdoor(worldX: number, stations: StationConfig[]): bo
   return false;
 }
 
+/**
+ * Set an operational timetable from inter-station distance rather than
+ * assigning nearly identical 40-second legs to every stop.
+ *
+ * The average is intentionally lower than the train's line speed: it includes
+ * acceleration, coasting, braking and the station approach. Passenger dwell
+ * is handled separately by the door state machine.
+ */
+function applyRealisticLegSchedules(
+  stations: StationConfig[],
+  averageRunningSpeedKmh: number,
+  departureAndApproachAllowanceSec: number
+): void {
+  const averageSpeedMs = averageRunningSpeedKmh / 3.6;
+  for (let i = 0; i < stations.length; i++) {
+    if (i === 0) {
+      stations[i].legScheduleSeconds = 0;
+      continue;
+    }
+    const distanceM = stations[i].stopX - stations[i - 1].stopX;
+    const runningSeconds = distanceM / averageSpeedMs;
+    stations[i].legScheduleSeconds = Math.round(
+      runningSeconds + departureAndApproachAllowanceSec
+    );
+  }
+}
+
+// Metro 14: urban automated metro, lower average speed and dense station spacing.
+// RER A: longer inter-station runs and a higher average operating speed.
+applyRealisticLegSchedules(METRO_14_STATIONS, 34, 6);
+applyRealisticLegSchedules(RER_A_STATIONS, 42, 8);
+
 function buildZonesForStations(stations: StationConfig[], isRer: boolean): SpeedLimitZone[] {
   const zones: SpeedLimitZone[] = [];
   const stationLimit = isRer ? 50 : 40;
@@ -500,10 +532,10 @@ export const METRO_14_LINE: LineDefinition = {
     perfectAlignM: 1.5,
     goodAlignM: 3.8,
     maxAllowedAlignM: 7.5,
-    doorOpenDuration: 1.4,
-    doorWarningDuration: 1.6,
-    doorCloseDuration: 1.3,
-    baseBoardingDuration: 4.5,
+    doorOpenDuration: 2.4,
+    doorWarningDuration: 2.7,
+    doorCloseDuration: 2.3,
+    baseBoardingDuration: 16,
   },
   masterTitle: 'Master of Line 14',
   seniorTitle: 'Senior RATP Metro Driver',
@@ -545,10 +577,10 @@ export const RER_A_LINE: LineDefinition = {
     perfectAlignM: 1.6,
     goodAlignM: 4.0,
     maxAllowedAlignM: 7.5,
-    doorOpenDuration: 1.6,
-    doorWarningDuration: 1.8,
-    doorCloseDuration: 1.5,
-    baseBoardingDuration: 5.4,
+    doorOpenDuration: 2.6,
+    doorWarningDuration: 2.9,
+    doorCloseDuration: 2.4,
+    baseBoardingDuration: 18.5,
   },
   masterTitle: 'Master of RER A',
   seniorTitle: 'Senior RATP/SNCF RER Driver',
