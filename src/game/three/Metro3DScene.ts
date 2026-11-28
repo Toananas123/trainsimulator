@@ -365,7 +365,11 @@ export class Metro3DScene {
     this.renderer.setSize(w, h, false);
     this.composer?.setSize(w, h);
     if (this.hasSnappedInitial && !this.contextLost) {
-      this.renderer.render(this.scene, this.camera);
+      if (this.composer) {
+        this.composer.render();
+      } else {
+        this.renderer.render(this.scene, this.camera);
+      }
     }
   }
 
